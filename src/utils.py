@@ -14,16 +14,24 @@ def load_uci_dataset(file_path, repo_id=None, verbose=False):
     """
     Load a dataset from the UCI Machine Learning Repository.
 
-    Parameters:
-    file_path (str): The path to the dataset file.
-    repo_id (int, optional): The repository ID to download the dataset if the file does not exist.
-    verbose (bool, optional): If True, print metadata of the dataset.
+    Parameters
+    ----------
+    file_path : str
+        The path to the dataset file.
+    repo_id : int, optional
+        The repository ID to download the dataset if the file does not exist.
+    verbose : bool, optional
+        If True, print metadata of the dataset.
 
-    Returns:
-    pd.DataFrame: The loaded dataset.
+    Returns
+    -------
+    pd.DataFrame
+        The loaded dataset.
 
-    Raises:
-    ValueError: If the file does not exist and no repo_id is provided.
+    Raises
+    ------
+    ValueError
+        If the file does not exist and no repo_id is provided.
     """
     if verbose:
         if repo_id is None:
@@ -36,7 +44,6 @@ def load_uci_dataset(file_path, repo_id=None, verbose=False):
             raise ValueError("Repo ID is required to download the dataset! It doesn't exist by default.")
 
         dataset = fetch_ucirepo(id=519)
-
         features = dataset.data.features
         targets = dataset.data.targets.squeeze()
 
@@ -49,37 +56,36 @@ def load_uci_dataset(file_path, repo_id=None, verbose=False):
     return dataset
 
 
-def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities, n_ensembles=5, n_features_sample=5, random_state=42, verbose=False):
+def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities,
+                          n_ensembles=5, n_features_sample=5, random_state=42, verbose=False):
     """
     Train multiple ensemble models on probabilistically sampled subsets of features and evaluate their performance.
 
-    The function creates an ensemble of models, each of which is trained on a random subset of features (sampled with
-    a given probability distribution). The performance of each model is evaluated using accuracy, and the results
-    are returned as a list of dictionaries.
-
-    Parameters:
-    - x_train: pd.DataFrame
+    Parameters
+    ----------
+    x_train : pd.DataFrame
         Training data containing features. Each row is a sample, and each column is a feature.
-    - x_test: pd.DataFrame
+    x_test : pd.DataFrame
         Test data containing features. Each row is a sample, and each column is a feature.
-    - y_train: pd.Series
+    y_train : pd.Series
         Training labels corresponding to `x_train`. Each entry is the label for the corresponding row in `x_train`.
-    - y_test: pd.Series
+    y_test : pd.Series
         Test labels corresponding to `x_test`. Each entry is the label for the corresponding row in `x_test`.
-    - probabilities: np.ndarray or list
+    probabilities : np.ndarray or list
         Array of probabilities for selecting each feature. This array is used to probabilistically sample subsets of features
         for each ensemble model. Length of `probabilities` should match the number of features in `x_train`.
-    - n_ensembles: int, default=5
+    n_ensembles : int, optional, default=5
         The number of ensemble models to train.
-    - n_features_sample: int, default=5
+    n_features_sample : int, optional, default=5
         The number of features to sample for each ensemble model.
-    - random_state: int, default=42
+    random_state : int, optional, default=42
         Random seed for reproducibility of results.
-    - verbose: bool, default=False
+    verbose : bool, optional, default=False
         Whether to print progress information during the training of the ensemble models.
 
-    Returns:
-    - ensemble_results: list of dicts
+    Returns
+    -------
+    list of dicts
         A list of dictionaries where each dictionary contains the results for one model in one ensemble, including:
         - "Ensemble": The ensemble number.
         - "Classifier": The name of the classifier.
@@ -133,12 +139,17 @@ def sample_feature_subset(probs, n_features):
     """
     Sample a subset of features based on given probabilities.
 
-    Parameters:
-    probs (np.ndarray): Array of probabilities for each feature.
-    n_features (int): Number of features to sample.
+    Parameters
+    ----------
+    probs : np.ndarray
+        Array of probabilities for each feature.
+    n_features : int
+        Number of features to sample.
 
-    Returns:
-    np.ndarray: Indices of the sampled features.
+    Returns
+    -------
+    np.ndarray
+        Indices of the sampled features.
     """
     feature_indices = np.arange(len(probs))
     sampled_indices = np.random.choice(feature_indices, size=n_features, p=probs, replace=False)
@@ -150,12 +161,17 @@ def compute_feature_frequency(ensemble_results, n_features):
     """
     Compute the frequency of each feature being selected across all ensemble models.
 
-    Parameters:
-    ensemble_results (list of dicts): List of dictionaries containing the results of the ensemble models.
-    n_features (int): Total number of features.
+    Parameters
+    ----------
+    ensemble_results : list of dicts
+        List of dictionaries containing the results of the ensemble models.
+    n_features : int
+        Total number of features.
 
-    Returns:
-    np.ndarray: Array of feature frequencies.
+    Returns
+    -------
+    np.ndarray
+        Array of feature frequencies.
     """
     ensemble_results_df = pd.DataFrame(ensemble_results)
 
