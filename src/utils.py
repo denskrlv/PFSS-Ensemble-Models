@@ -5,7 +5,9 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
+from tqdm import tqdm
 from ucimlrepo import fetch_ucirepo
 
 
@@ -39,10 +41,11 @@ def load_uci_dataset(repo_id):
     return dataset.metadata, combined_df
 
 
-def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities,
+def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities, cv=5,
                           n_ensembles=5, n_features_sample=5, random_state=42, verbose=False):
     """
-    Train multiple ensemble models on probabilistically sampled subsets of features and evaluate their performance.
+    Train multiple ensemble models on probabilistically sampled subsets of features,
+    perform GridSearchCV for hyperparameter tuning for each model, and evaluate their performance.
 
     Parameters
     ----------
@@ -57,6 +60,8 @@ def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities,
     probabilities : np.ndarray or list
         Array of probabilities for selecting each feature. This array is used to probabilistically sample subsets of features
         for each ensemble model. Length of `probabilities` should match the number of features in `x_train`.
+    cv: int, optional, default=5
+        Number of cross-validation folds for GridSearchCV.
     n_ensembles : int, optional, default=5
         The number of ensemble models to train.
     n_features_sample : int, optional, default=5
@@ -74,46 +79,55 @@ def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities,
         - "Classifier": The name of the classifier.
         - "Accuracy": The accuracy of the classifier on the test data.
         - "Sampled Features": The list of feature indices that were sampled for the ensemble.
+        - "Best Params": Best hyperparameters found by GridSearchCV.
     """
     ensemble_results = []
 
-    # Define classifiers
+    # Define classifiers and their hyperparameter grids
     classifiers = {
-        "Random Forest": RandomForestClassifier(random_state=random_state),
-        "Gradient Boosting": GradientBoostingClassifier(random_state=random_state),
-        "AdaBoost": AdaBoostClassifier(random_state=random_state),
-        "Logistic Regression": LogisticRegression(max_iter=1000, random_state=random_state),
-        "SVM": SVC(kernel='rbf', probability=True, random_state=random_state),
-        "LDA": LinearDiscriminantAnalysis()
+        "Random Forest": (RandomForestClassifier(random_state=random_state),
+                          {'n_estimators': [50, 100], 'max_depth': [10, 20, None]}),
+        "Gradient Boosting": (GradientBoostingClassifier(random_state=random_state),
+                              {'n_estimators': [50, 100], 'learning_rate': [0.01, 0.1, 1.0]}),
+        "AdaBoost": (AdaBoostClassifier(random_state=random_state),
+                     {'n_estimators': [50, 100], 'learning_rate': [0.5, 1.0, 2.0]}),
+        "Logistic Regression": (LogisticRegression(max_iter=1000, random_state=random_state),
+                               {'C': [0.1, 1.0, 10.0], 'penalty': ['l2']}),
+        "SVM": (SVC(kernel='rbf', probability=True, random_state=random_state),
+                {'C': [1, 10, 100], 'gamma': ['scale', 'auto']}),
+        "LDA": (LinearDiscriminantAnalysis(),
+                {'solver': ['lsqr', 'eigen'], 'shrinkage': [None, 'auto']}),
     }
 
     # Sample feature subset and train each classifier
-    for ensemble in range(n_ensembles):
-        if verbose:
-            print(f"\nTraining Ensemble {ensemble + 1}/{n_ensembles}...")
-
+    for ensemble in tqdm(range(n_ensembles), desc="Ensemble Models with GridSearch", leave=False):
         # Sample feature subset
         sampled_features = sample_feature_subset(probabilities, n_features_sample)
         x_train_sampled = x_train.iloc[:, sampled_features]
         x_test_sampled = x_test.iloc[:, sampled_features]
 
-        # Train and evaluate each classifier
-        for name, clf in classifiers.items():
-            if verbose:
-                print(f"Training {name}...")
+        # Train and evaluate each classifier with GridSearchCV
+        for name, (clf, param_grid) in classifiers.items():
+            grid_search = GridSearchCV(clf, param_grid, cv=cv, verbose=verbose, n_jobs=-1)
+            grid_search.fit(x_train_sampled, y_train)
+            best_clf = grid_search.best_estimator_
+            best_params = grid_search.best_params_
 
-            clf.fit(x_train_sampled, y_train)
-            y_pred = clf.predict(x_test_sampled)
+            # Make predictions with the best estimator
+            y_pred = best_clf.predict(x_test_sampled)
             accuracy = accuracy_score(y_test, y_pred)
+
             ensemble_results.append({
                 "Ensemble": ensemble + 1,
                 "Classifier": name,
                 "Accuracy": accuracy,
-                "Sampled Features": sampled_features
+                "Sampled Features": sampled_features,
+                "Best Params": best_params
             })
 
             if verbose:
-                print(f"{name} Accuracy: {accuracy:.4f}")
+                print(f"{name} - Best Params: {best_params}")
+                print(f"{name} - Accuracy: {accuracy:.4f}")
 
     return ensemble_results
 
