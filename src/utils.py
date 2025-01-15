@@ -36,14 +36,14 @@ def load_uci_dataset(file_path, repo_id=None, verbose=False):
     if verbose:
         if repo_id is None:
             raise ValueError("Repo ID is required to show metadata of the dataset!")
-        dataset = fetch_ucirepo(id=519)
+        dataset = fetch_ucirepo(id=repo_id)
         print(dataset.metadata)
 
     if not os.path.exists(file_path):
         if repo_id is None:
             raise ValueError("Repo ID is required to download the dataset! It doesn't exist by default.")
 
-        dataset = fetch_ucirepo(id=519)
+        dataset = fetch_ucirepo(id=repo_id)
         features = dataset.data.features
         targets = dataset.data.targets.squeeze()
 
