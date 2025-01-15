@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import pandas as pd
 
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -10,18 +9,14 @@ from sklearn.svm import SVC
 from ucimlrepo import fetch_ucirepo
 
 
-def load_uci_dataset(file_path, repo_id=None, verbose=False):
+def load_uci_dataset(repo_id):
     """
     Load a dataset from the UCI Machine Learning Repository.
 
     Parameters
     ----------
-    file_path : str
-        The path to the dataset file.
-    repo_id : int, optional
-        The repository ID to download the dataset if the file does not exist.
-    verbose : bool, optional
-        If True, print metadata of the dataset.
+    repo_id : int
+        The repository ID to download the dataset.
 
     Returns
     -------
@@ -33,27 +28,15 @@ def load_uci_dataset(file_path, repo_id=None, verbose=False):
     ValueError
         If the file does not exist and no repo_id is provided.
     """
-    if verbose:
-        if repo_id is None:
-            raise ValueError("Repo ID is required to show metadata of the dataset!")
-        dataset = fetch_ucirepo(id=repo_id)
-        print(dataset.metadata)
+    if repo_id is None:
+        raise ValueError("Repo ID is required to download the dataset!")
 
-    if not os.path.exists(file_path):
-        if repo_id is None:
-            raise ValueError("Repo ID is required to download the dataset! It doesn't exist by default.")
+    dataset = fetch_ucirepo(id=repo_id)
+    features = dataset.data.features
+    targets = dataset.data.targets.squeeze()
+    combined_df = pd.concat([features, targets], axis=1)
 
-        dataset = fetch_ucirepo(id=repo_id)
-        features = dataset.data.features
-        targets = dataset.data.targets.squeeze()
-
-        combined_df = pd.concat([features, targets], axis=1)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        combined_df.to_csv(file_path, index=False)
-    else:
-        dataset = pd.read_csv(file_path)
-
-    return dataset
+    return dataset.metadata, combined_df
 
 
 def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities,
