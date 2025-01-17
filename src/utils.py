@@ -41,7 +41,7 @@ def load_uci_dataset(repo_id):
     return dataset.metadata, combined_df
 
 
-def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities, cv=5,
+def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities=None, cv=5,
                           n_ensembles=5, n_features_sample=5, random_state=42, verbose=False):
     """
     Train multiple ensemble models on probabilistically sampled subsets of features,
@@ -101,10 +101,15 @@ def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities, cv=5,
 
     # Sample feature subset and train each classifier
     for ensemble in tqdm(range(n_ensembles), desc="Ensemble Models with GridSearch", leave=False):
-        # Sample feature subset
-        sampled_features = sample_feature_subset(probabilities, n_features_sample)
-        x_train_sampled = x_train.iloc[:, sampled_features]
-        x_test_sampled = x_test.iloc[:, sampled_features]
+        # Check that the probabilities array is not empty, otherwise train on all features
+        if probabilities is None:
+            x_train_sampled = x_train
+            x_test_sampled = x_test
+            sampled_features = np.arange(x_train.shape[1])
+        else:
+            sampled_features = sample_feature_subset(probabilities, n_features_sample)
+            x_train_sampled = x_train.iloc[:, sampled_features]
+            x_test_sampled = x_test.iloc[:, sampled_features]
 
         # Train and evaluate each classifier with GridSearchCV
         for name, (clf, param_grid) in classifiers.items():
