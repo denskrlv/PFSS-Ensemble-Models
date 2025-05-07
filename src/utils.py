@@ -41,6 +41,14 @@ def load_uci_dataset(repo_id):
     return dataset.metadata, combined_df
 
 
+def normalize_dataset(dataset, num_bins):
+    continuous_vars = dataset.select_dtypes(include=['float', 'int']).columns
+    print("Continuous columns identified:", continuous_vars)
+    for col in continuous_vars:
+        dataset[col] = pd.cut(dataset[col], bins=num_bins, labels=[f'Bin {i+1}' for i in range(num_bins)])
+    return dataset
+
+
 def train_ensemble_models(x_train, x_test, y_train, y_test, probabilities=None, cv=5,
                           n_ensembles=5, n_features_sample=5, random_state=42, verbose=False):
     """
